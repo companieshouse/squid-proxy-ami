@@ -1,2 +1,2 @@
-# ami-repository-template
+# squid-proxy-ami
 

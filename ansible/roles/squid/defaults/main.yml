@@ -1,0 +1,50 @@
+---
+squid_package: squid
+squid_user: squid
+squid_group: squid
+squid_hostname: squid
+squid_version: 3.5.20-15.el7_8.1
+squid_config_file: squid.conf
+squid_config_dir: /etc/squid
+squid_whitelist_dir: "{{ squid_config_dir }}/whitelists"
+squid_ssl_dir: "{{ squid_config_dir }}/ssl"
+squid_service_name: squid
+squid_server_http_port: 3128
+squid_server_https_port: 3129
+only_log_requests_mode: false
+selinux_ports: true
+http_prefix_whitelists:
+  - {
+      name: "all_10_http",
+      cidr: "10.0.0.0/8",
+      dns_whitelist: []
+    }
+
+https_prefix_whitelists:
+  - {
+      name: "all_10_https",
+      cidr: "10.0.0.0/8",
+      dns_whitelist: []
+    }
+
+global_http_whitelist:
+  - {
+      name: "global_http",
+      dns_whitelist: []
+    }
+
+global_https_whitelist:
+  - {
+      name: "global_https",
+      dns_whitelist: []
+    }
+    
+squid_sslproxy_cert_error_bypass_hosts: []
+squid_sslproxy_cert_error_bypass_file: "{{squid_whitelist_dir}}/sslproxy_cert_error_bypass_hosts"
+
+squid_allowed_hosts_range: "10.0.0.0/8"
+ssh_allowed_hosts_range: "10.0.0.0/8"
+
+cwa_install_path: /opt/aws/amazon-cloudwatch-agent
+cwa_agent_ctl: "{{ cwa_install_path }}/bin/amazon-cloudwatch-agent-ctl"
+cloudwatch_agent_conf_file: "{{ cwa_install_path }}/etc/amazon-cloudwatch-agent.json"

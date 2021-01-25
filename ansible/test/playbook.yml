@@ -1,0 +1,22 @@
+---
+- name: Bring up docker containers
+  hosts: localhost
+  gather_facts: false
+  vars:
+    inventory:
+      - name: squid
+        image: "geerlingguy/docker-centos7-ansible"
+  roles:
+    - role: provision_docker
+      provision_docker_inventory: "{{ inventory }}"
+      provision_docker_privileged: True
+
+- name: Setup testing pre-reqs
+  hosts: squid
+  roles:
+    - epel
+    - cloudwatch-agent
+
+- import_playbook: ../playbook.yml
+  vars: 
+    selinux_ports: false

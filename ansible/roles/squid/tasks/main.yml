@@ -1,0 +1,6 @@
+---
+- name: Include tasks for setting up required network and firewall config
+  include_tasks: network.yml
+
+- name: Include tasks for Squid server installation and configuration
+  include_tasks: squid.yml

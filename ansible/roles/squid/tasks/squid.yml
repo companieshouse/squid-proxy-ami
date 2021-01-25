@@ -1,0 +1,162 @@
+---
+- name: Install Prerequisites
+  package:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - python
+    - python3
+    - python-pip
+    - python3-pip
+    - policycoreutils-python
+    - libselinux-python
+    - awscli
+
+- name: Install Prerequisites (python)
+  pip:
+    name: ["cryptography"]
+    state: latest
+    executable: "{{ item }}"
+  with_items:
+    - pip
+    - pip3
+
+- name: install squid
+  package:
+    name: "{{ squid_package }}-{{ squid_version }}"
+    state: present
+
+- name: setup group
+  group:
+    name: "{{ squid_group }}"
+    system: yes
+    state: present
+
+- name: setup user
+  user:
+    name: "{{ squid_user }}"
+    group: "{{ squid_group }}"
+    create_home: no
+    state: present
+    home: /var/spool/squid
+    shell: /sbin/nologin
+    system: yes
+
+- name: create squid directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ squid_user }}"
+    group: "{{ squid_group }}"
+  with_items:
+    - "{{ squid_config_dir }}"
+    - "{{ squid_whitelist_dir }}"
+    - "{{ squid_ssl_dir }}"
+
+- name: Generate an OpenSSL private key
+  openssl_privatekey:
+    path: "{{squid_ssl_dir}}/squid.key"
+    size: 4096
+    owner: "{{ squid_user }}"
+    group: "{{ squid_group }}"
+    mode: 0600
+
+- name: Generate an OpenSSL CSR
+  openssl_csr:
+    path: "{{squid_ssl_dir}}/squid.csr"
+    privatekey_path: "{{squid_ssl_dir}}/squid.key"
+    common_name: "{{ squid_hostname }}"
+    subject_alt_name: "DNS:{{ squid_hostname }}"
+    organization_name: "squid"
+    organizational_unit_name: "squid"
+
+- name: Generate a Self Signed OpenSSL certificate
+  openssl_certificate:
+    path: "{{squid_ssl_dir}}/squid.crt"
+    privatekey_path: "{{squid_ssl_dir}}/squid.key"
+    csr_path: "{{squid_ssl_dir}}/squid.csr"
+    provider: selfsigned
+  notify:
+    - create squid certificate chain
+
+- meta: flush_handlers
+
+- name: configure squid
+  template:
+    src: "{{ squid_config_file }}.j2"
+    dest: "{{ squid_config_dir }}/{{ squid_config_file }}"
+    owner: "{{ squid_user }}"
+    group: "{{ squid_group }}"
+    mode: "0600"
+  notify:
+    - squid parse config
+    - squid reconfigure server
+
+- name: configure whitelists
+  blockinfile:
+    path: "{{squid_whitelist_dir}}/{{ item.name }}_whitelist.conf"
+    block: "{{ item.dns_whitelist | join('\n') }}"
+    owner: "{{ squid_user }}"
+    group: "{{ squid_group }}"
+    mode: "0600"
+    create: yes
+  with_items:
+    - "{{ http_prefix_whitelists }}"
+    - "{{ https_prefix_whitelists }}"
+    - "{{ global_http_whitelist }}"
+    - "{{ global_https_whitelist }}"
+  notify:
+    - squid parse config
+    - squid reconfigure server
+
+- name: Configure SSL error bypass hosts
+  blockinfile:
+    path: "{{squid_sslproxy_cert_error_bypass_file}}"
+    block: "{{ squid_sslproxy_cert_error_bypass_hosts | join('\n') }}"
+    owner: "{{ squid_user }}"
+    group: "{{ squid_group }}"
+    mode: "0600"
+    create: yes
+  when: squid_sslproxy_cert_error_bypass_hosts | length >= 1
+  notify:
+    - squid parse config
+    - squid reconfigure server
+
+- name: Squid selinux ports
+  seport:
+    ports: "{{ item }}"
+    proto: tcp
+    setype: squid_port_t
+    state: present
+  when:
+    - selinux_ports|bool
+  with_items:
+    - "{{ squid_server_http_port }}"
+    - "{{ squid_server_https_port }}"    
+
+- name: Enable squid service
+  service:
+    name: squid
+    state: started
+    enabled: yes
+
+- meta: flush_handlers
+
+- name: Setup Cloudwatch Metrics
+  block:
+    - name: Get existing conf from remote host
+      slurp:
+        src: "{{ cloudwatch_agent_conf_file }}"
+      register: existing_conf
+
+    - name: Generate updated Cloudwatch conf
+      set_fact:
+        cloudwatch_conf: "{{ (( existing_conf['content'] | b64decode | from_json) | combine((lookup('file', 'cloudwatch_agent_metrics.json' )| from_json ))) | to_nice_json }}"
+
+    - name: Write updated Cloudwatch conf file
+      copy:
+        dest: "{{ cloudwatch_agent_conf_file }}"
+        content: "{{ cloudwatch_conf }}"
+        force: yes
+      notify: Reload amazon-cloudwatch-agent
+  when: cloudwatch_agent_conf_file != ''
