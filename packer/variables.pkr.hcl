@@ -89,3 +89,8 @@ variable "nagios_api_key" {
   default     = ""
   description = "This key will be supplied to the Nagios agent Ansible role to populate jinja templates"
 }
+
+variable "s3_config_bucket" {
+  type        = string
+  description = "Bucket that contains any artifacts required to complete the build process, will be passed to Ansible"
+}
