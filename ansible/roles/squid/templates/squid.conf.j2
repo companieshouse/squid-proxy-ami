@@ -59,7 +59,7 @@ acl {{ prefix['name'] }}_src src {{ prefix['cidr'] }}
 http_access allow {{ prefix['name'] }}_sites {{ prefix['name'] }}_src
 
 {% endfor %}
-acl global_http_sites dstdomain "{{squid_domainlist_dir}}'/http_global_domainlist.conf"
+acl global_http_sites dstdomain "{{squid_domainlist_dir}}/http_global_domainlist.conf"
 http_access allow global_http_sites
 
 ##HTTPS DNS Filtering
