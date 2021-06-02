@@ -4,3 +4,13 @@
 
 - name: Include tasks for Squid server installation and configuration
   include_tasks: squid.yml
+
+- name: Copy deployment scripts to server for later use
+  copy:
+    src: "{{ item }}"
+    dest: "{{ ansible_deploy_playbook_directory }}/{{ item }}"
+    mode: 0755
+  loop:
+    - deployment-script.yml
+    - config_check_update.yml
+

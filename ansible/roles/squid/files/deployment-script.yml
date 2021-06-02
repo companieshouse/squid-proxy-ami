@@ -1,0 +1,15 @@
+---
+  - name: Configure Cloudwatch logs and check-update config script
+    hosts: localhost
+    gather_facts: true
+    collections: 
+      - ch_collections.base
+    roles:
+      - name: ch_collections.base.cloudwatch_agent_config
+        when: cw_log_files is defined
+    tasks:
+      - name: Create cron entry for config update check
+          name: "check configs for updates"
+          minute: "0"
+          hour: "*/3"
+          job: " /usr/local/bin/ansible-playbook /root/config_check_update.yml -e \"s3_config_bucket={{ s3_config_bucket }}\" "

@@ -3,6 +3,3 @@
   become: true
   roles:
     - role: squid
-      vars:
-        only_log_requests_mode: true 
-        squid_sslproxy_cert_error_bypass_hosts: ["rhui3.eu-west-2.aws.ce.redhat.com"]

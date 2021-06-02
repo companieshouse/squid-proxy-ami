@@ -12,9 +12,15 @@
     - libselinux-python
     - awscli
 
-- name: Install Prerequisites (python)
+- name: Install Prerequisites (pip upgrade)
   pip:
-    name: ["cryptography"]
+    name: [ "pip", "boto3", "awscli"]
+    state: latest
+    executable: pip3
+
+- name: Install Prerequisites (cryptography)
+  pip:
+    name: "cryptography"
     state: latest
     executable: "{{ item }}"
   with_items:
@@ -50,10 +56,12 @@
     group: "{{ squid_group }}"
   with_items:
     - "{{ squid_config_dir }}"
-    - "{{ squid_whitelist_dir }}"
+    - "{{ squid_domainlist_dir }}"
     - "{{ squid_ssl_dir }}"
 
 - name: Generate an OpenSSL private key
+  vars: 
+    ansible_python_interpreter: python3
   openssl_privatekey:
     path: "{{squid_ssl_dir}}/squid.key"
     size: 4096
@@ -62,6 +70,8 @@
     mode: 0600
 
 - name: Generate an OpenSSL CSR
+  vars: 
+    ansible_python_interpreter: python3
   openssl_csr:
     path: "{{squid_ssl_dir}}/squid.csr"
     privatekey_path: "{{squid_ssl_dir}}/squid.key"
@@ -71,6 +81,8 @@
     organizational_unit_name: "squid"
 
 - name: Generate a Self Signed OpenSSL certificate
+  vars: 
+    ansible_python_interpreter: python3
   openssl_certificate:
     path: "{{squid_ssl_dir}}/squid.crt"
     privatekey_path: "{{squid_ssl_dir}}/squid.key"
@@ -78,7 +90,7 @@
     provider: selfsigned
   notify:
     - create squid certificate chain
-
+ 
 - meta: flush_handlers
 
 - name: configure squid
@@ -92,19 +104,31 @@
     - squid parse config
     - squid reconfigure server
 
-- name: configure whitelists
-  blockinfile:
-    path: "{{squid_whitelist_dir}}/{{ item.name }}_whitelist.conf"
-    block: "{{ item.dns_whitelist | join('\n') }}"
+- name: Download domainlists from S3
+  vars: 
+    ansible_python_interpreter: python3
+  aws_s3:
+    bucket: "{{ s3_config_bucket }}"
+    object: "net-squid-configs/{{ item.name }}.conf"
+    dest: "{{squid_domainlist_dir}}/{{ item.name }}.conf"
+    mode: get
+  with_items:
+    - "{{ http_prefix_domainlists }}"
+    - "{{ https_prefix_domainlists }}"
+    - "{{ global_http_domainlist }}"
+    - "{{ global_https_domainlist }}"
+
+- name: Change file ownership, group and permissions on domainlist configs
+  ansible.builtin.file:
+    path: "{{squid_domainlist_dir}}/{{ item.name }}.conf"
     owner: "{{ squid_user }}"
     group: "{{ squid_group }}"
     mode: "0600"
-    create: yes
   with_items:
-    - "{{ http_prefix_whitelists }}"
-    - "{{ https_prefix_whitelists }}"
-    - "{{ global_http_whitelist }}"
-    - "{{ global_https_whitelist }}"
+    - "{{ http_prefix_domainlists }}"
+    - "{{ https_prefix_domainlists }}"
+    - "{{ global_http_domainlist }}"
+    - "{{ global_https_domainlist }}"
   notify:
     - squid parse config
     - squid reconfigure server
@@ -141,22 +165,3 @@
     enabled: yes
 
 - meta: flush_handlers
-
-- name: Setup Cloudwatch Metrics
-  block:
-    - name: Get existing conf from remote host
-      slurp:
-        src: "{{ cloudwatch_agent_conf_file }}"
-      register: existing_conf
-
-    - name: Generate updated Cloudwatch conf
-      set_fact:
-        cloudwatch_conf: "{{ (( existing_conf['content'] | b64decode | from_json) | combine((lookup('file', 'cloudwatch_agent_metrics.json' )| from_json ))) | to_nice_json }}"
-
-    - name: Write updated Cloudwatch conf file
-      copy:
-        dest: "{{ cloudwatch_agent_conf_file }}"
-        content: "{{ cloudwatch_conf }}"
-        force: yes
-      notify: Reload amazon-cloudwatch-agent
-  when: cloudwatch_agent_conf_file != ''
