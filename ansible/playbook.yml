@@ -2,4 +2,8 @@
 - hosts: squid
   become: true
   roles:
+    - role: ch_collections.base.nagios_nrpe_client
     - role: squid
+
+
+  
