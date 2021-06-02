@@ -12,7 +12,7 @@
     - libselinux-python
     - awscli
 
-- name: Install Prerequisites (pip upgrade)
+- name: Install Prerequisites (aws)
   pip:
     name: [ "pip", "boto3", "awscli"]
     state: latest
