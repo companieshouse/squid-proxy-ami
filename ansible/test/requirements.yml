@@ -1,10 +1,19 @@
 ---
-- src: chrismeyersfsu.provision_docker
-  name: provision_docker
+  collections:
+    - name: https://github.com/companieshouse/ansible-collections.git#/ch_collections/base/
+      type: git
+      version: 0.1.43
+  
+    - name: ansible.posix
+      version: 1.1.1
+  
+  roles:    
+    - src: chrismeyersfsu.provision_docker
+      name: provision_docker
 
-- src: https://github.com/christiangda/ansible-role-amazon-cloudwatch-agent.git
-  name: cloudwatch-agent
+    - src: https://github.com/christiangda/ansible-role-amazon-cloudwatch-agent.git
+      name: cloudwatch-agent
 
-- src: https://github.com/geerlingguy/ansible-role-repo-epel
-  name: epel
-  version: "1.3.0"  
+    - src: https://github.com/geerlingguy/ansible-role-repo-epel
+      name: epel
+      version: "1.3.0"  
