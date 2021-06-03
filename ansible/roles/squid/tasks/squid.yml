@@ -22,10 +22,7 @@
   pip:
     name: "cryptography"
     state: latest
-    executable: "{{ item }}"
-  with_items:
-    - pip
-    - pip3
+    executable: pip3
 
 - name: install squid
   package:
