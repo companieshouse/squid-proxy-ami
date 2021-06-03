@@ -1,0 +1,167 @@
+---
+- name: Install Prerequisites
+  package:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - python
+    - python3
+    - python-pip
+    - python3-pip
+    - policycoreutils-python
+    - libselinux-python
+    - awscli
+
+- name: Install Prerequisites (aws)
+  pip:
+    name: [ "pip", "boto3", "awscli"]
+    state: latest
+    executable: pip3
+
+- name: Install Prerequisites (cryptography)
+  pip:
+    name: "cryptography"
+    state: latest
+    executable: "{{ item }}"
+  with_items:
+    - pip
+    - pip3
+
+- name: install squid
+  package:
+    name: "{{ squid_package }}-{{ squid_version }}"
+    state: present
+
+- name: setup group
+  group:
+    name: "{{ squid_group }}"
+    system: yes
+    state: present
+
+- name: setup user
+  user:
+    name: "{{ squid_user }}"
+    group: "{{ squid_group }}"
+    create_home: no
+    state: present
+    home: /var/spool/squid
+    shell: /sbin/nologin
+    system: yes
+
+- name: create squid directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ squid_user }}"
+    group: "{{ squid_group }}"
+  with_items:
+    - "{{ squid_config_dir }}"
+    - "{{ squid_domainlist_dir }}"
+    - "{{ squid_ssl_dir }}"
+
+- name: Generate an OpenSSL private key
+  vars: 
+    ansible_python_interpreter: python3
+  openssl_privatekey:
+    path: "{{squid_ssl_dir}}/squid.key"
+    size: 4096
+    owner: "{{ squid_user }}"
+    group: "{{ squid_group }}"
+    mode: 0600
+
+- name: Generate an OpenSSL CSR
+  vars: 
+    ansible_python_interpreter: python3
+  openssl_csr:
+    path: "{{squid_ssl_dir}}/squid.csr"
+    privatekey_path: "{{squid_ssl_dir}}/squid.key"
+    common_name: "{{ squid_hostname }}"
+    subject_alt_name: "DNS:{{ squid_hostname }}"
+    organization_name: "squid"
+    organizational_unit_name: "squid"
+
+- name: Generate a Self Signed OpenSSL certificate
+  vars: 
+    ansible_python_interpreter: python3
+  openssl_certificate:
+    path: "{{squid_ssl_dir}}/squid.crt"
+    privatekey_path: "{{squid_ssl_dir}}/squid.key"
+    csr_path: "{{squid_ssl_dir}}/squid.csr"
+    provider: selfsigned
+  notify:
+    - create squid certificate chain
+ 
+- meta: flush_handlers
+
+- name: configure squid
+  template:
+    src: "{{ squid_config_file }}.j2"
+    dest: "{{ squid_config_dir }}/{{ squid_config_file }}"
+    owner: "{{ squid_user }}"
+    group: "{{ squid_group }}"
+    mode: "0600"
+  notify:
+    - squid parse config
+    - squid reconfigure server
+
+- name: Download domainlists from S3
+  vars: 
+    ansible_python_interpreter: python3
+  aws_s3:
+    bucket: "{{ s3_config_bucket }}"
+    object: "net-squid-configs/{{ item.name }}.conf"
+    dest: "{{squid_domainlist_dir}}/{{ item.name }}.conf"
+    mode: get
+  with_items:
+    - "{{ http_prefix_domainlists }}"
+    - "{{ https_prefix_domainlists }}"
+    - "{{ global_http_domainlist }}"
+    - "{{ global_https_domainlist }}"
+
+- name: Change file ownership, group and permissions on domainlist configs
+  ansible.builtin.file:
+    path: "{{squid_domainlist_dir}}/{{ item.name }}.conf"
+    owner: "{{ squid_user }}"
+    group: "{{ squid_group }}"
+    mode: "0600"
+  with_items:
+    - "{{ http_prefix_domainlists }}"
+    - "{{ https_prefix_domainlists }}"
+    - "{{ global_http_domainlist }}"
+    - "{{ global_https_domainlist }}"
+  notify:
+    - squid parse config
+    - squid reconfigure server
+
+- name: Configure SSL error bypass hosts
+  blockinfile:
+    path: "{{squid_sslproxy_cert_error_bypass_file}}"
+    block: "{{ squid_sslproxy_cert_error_bypass_hosts | join('\n') }}"
+    owner: "{{ squid_user }}"
+    group: "{{ squid_group }}"
+    mode: "0600"
+    create: yes
+  when: squid_sslproxy_cert_error_bypass_hosts | length >= 1
+  notify:
+    - squid parse config
+    - squid reconfigure server
+
+- name: Squid selinux ports
+  seport:
+    ports: "{{ item }}"
+    proto: tcp
+    setype: squid_port_t
+    state: present
+  when:
+    - selinux_ports|bool
+  with_items:
+    - "{{ squid_server_http_port }}"
+    - "{{ squid_server_https_port }}"    
+
+- name: Enable squid service
+  service:
+    name: squid
+    state: started
+    enabled: yes
+
+- meta: flush_handlers

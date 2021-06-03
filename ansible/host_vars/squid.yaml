@@ -1,0 +1,40 @@
+---
+only_log_requests_mode: true 
+squid_sslproxy_cert_error_bypass_hosts: ["rhui3.eu-west-2.aws.ce.redhat.com"]
+
+## Nagios Variables
+auto_register_client: true
+nagios_host: nagios.sharedservices.aws.internal
+nrpe_allowed_hosts:
+  - "127.0.0.1"
+  - "10.44.12.0/24"
+  - "10.44.13.0/24"
+  - "10.44.14.0/24"
+nrpe_plugin_packages:
+  - nagios-plugins-nrpe
+  - nagios-plugins
+  - nagios-plugins-disk
+nrpe_config: 
+  dont_blame_nrpe: 1
+nrpe_command:
+  check_disk:
+    script: check_disk
+    option: $ARG1$
+  check_load:
+    script: check_load
+    option: $ARG1$
+  check_sshd:
+    sudo: true
+    script: check_service.sh
+    option: $ARG1$
+  check_squid:
+    sudo: true
+    script: check_service.sh
+    option: $ARG1$
+  check_syslogd:
+    sudo: true
+    script: check_service.sh
+    option: $ARG1$
+  check_users:
+    script: check_users
+    option: $ARG1$

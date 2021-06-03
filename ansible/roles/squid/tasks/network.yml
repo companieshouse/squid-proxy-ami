@@ -1,0 +1,125 @@
+---
+- name: Disable IPv6
+  sysctl:
+    name: "{{ item }}"
+    value: 1
+    state: present
+    reload: yes
+  with_items:
+    - net.ipv6.conf.all.disable_ipv6
+    - net.ipv6.conf.default.disable_ipv6
+
+- name: Install iptables
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - iptables
+    - iptables-services
+
+- name: Ensure FirewallD is disabled
+  package:
+    name: firewalld
+    state: absent
+
+- name: Iptables defaults (1/2)
+  iptables:
+    chain: "{{ item }}"
+    flush: yes
+  with_items:  
+    - INPUT
+    - FORWARD
+    - OUTPUT
+
+- name: Iptables defaults (2/2)
+  iptables:
+    table: nat
+    chain: "{{ item }}"
+    flush: yes
+  with_items:  
+    - INPUT
+    - OUTPUT
+    - PREROUTING
+    - POSTROUTING
+
+- name: Forward port 80 to squid
+  iptables:
+    table: nat
+    chain: PREROUTING
+    protocol: tcp
+    match: tcp
+    destination_port: 80
+    jump: REDIRECT
+    to_ports: "{{ squid_server_http_port }}"
+    comment: Redirect http traffic to squid
+  notify: iptables save
+
+- name: Forward port 443 to squid
+  iptables:
+    table: nat
+    chain: PREROUTING
+    protocol: tcp
+    match: tcp
+    destination_port: 443
+    jump: REDIRECT
+    to_ports: "{{ squid_server_https_port }}"
+    comment: Redirect https traffic to squid
+  notify: iptables save
+
+- name: Allow incoming traffic from allowed addresses to squid
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    ctstate: NEW
+    destination_port: "{{ item }}"
+    jump: ACCEPT
+    source: "{{ squid_allowed_hosts_range }}"
+  notify: iptables save
+  with_items:
+    - "{{ squid_server_http_port }}"
+    - "{{ squid_server_https_port }}"
+
+- name: Allow new incoming SYN packets on TCP port 22 (SSH).
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 22
+    ctstate: NEW
+    syn: match
+    jump: ACCEPT
+    comment: Accept new SSH connections
+    source: "{{ ssh_allowed_hosts_range }}"
+  notify: iptables save
+
+- name: Allow related and established connections
+  iptables:
+    chain: INPUT
+    ctstate: ESTABLISHED,RELATED
+    jump: ACCEPT
+  notify: iptables save
+
+- name: Set the policy for the INPUT chain to DROP
+  iptables:
+    chain: INPUT
+    policy: DROP
+  notify: iptables save
+
+- name: Set the policy for the FORWARD chain to DROP
+  iptables:
+    chain: FORWARD
+    policy: DROP
+  notify: iptables save
+
+- name: Set the policy for the OUTPUT chain to ACCEPT
+  iptables:
+    chain: OUTPUT
+    policy: ACCEPT
+  notify: iptables save
+
+- meta: flush_handlers
+
+- name: Iptables service
+  service:
+    name: iptables
+    state: started
+    enabled: yes

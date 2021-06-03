@@ -1,0 +1,45 @@
+---
+s3_config_bucket: ""
+ansible_deploy_playbook_directory: "/root"
+
+squid_package: squid
+squid_user: squid
+squid_group: squid
+squid_hostname: squid
+squid_version: 3.5.20-15.el7_8.1
+squid_config_file: squid.conf
+squid_config_dir: /etc/squid
+squid_domainlist_dir: "{{ squid_config_dir }}/domainlists"
+squid_ssl_dir: "{{ squid_config_dir }}/ssl"
+squid_service_name: squid
+squid_server_http_port: 3128
+squid_server_https_port: 3129
+only_log_requests_mode: false
+selinux_ports: true
+http_prefix_domainlists:
+  - {
+      name: "http_domainlist",
+      cidr: "10.0.0.0/8"
+    }
+
+https_prefix_domainlists:
+  - {
+      name: "https_domainlist",
+      cidr: "10.0.0.0/8"
+    }
+
+global_http_domainlist:
+  - {
+      name: "global_http_domainlist"
+    }
+
+global_https_domainlist:
+  - {
+      name: "global_https_domainlist"
+    }
+    
+squid_sslproxy_cert_error_bypass_hosts: []
+squid_sslproxy_cert_error_bypass_file: "{{squid_domainlist_dir}}/sslproxy_cert_error_bypass_hosts"
+
+squid_allowed_hosts_range: "10.0.0.0/8"
+ssh_allowed_hosts_range: "10.0.0.0/8"

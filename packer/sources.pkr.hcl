@@ -1,5 +1,6 @@
 source "amazon-ebs" "builder" {
   ami_name             = "${var.ami_name_prefix}-${var.version}"
+  ami_users            = var.ami_account_ids
   communicator         = "ssh"
   instance_type        = var.aws_instance_type
   region               = var.aws_region
@@ -7,6 +8,8 @@ source "amazon-ebs" "builder" {
   ssh_username         = var.ssh_username
   ssh_keypair_name     = "packer-builders-${var.aws_region}"
   iam_instance_profile = "packer-builders-${var.aws_region}"
+  encrypt_boot         = var.encrypt_boot
+  kms_key_id           = var.kms_key_id
 
   launch_block_device_mappings {
     device_name = "/dev/sda1"
@@ -41,6 +44,6 @@ source "amazon-ebs" "builder" {
 
   tags = {
     Name    = "${var.ami_name_prefix}-${var.version}"
-    Builder = "packer-{{packer_version}}"
+    Builder = "packer"
   }
 }

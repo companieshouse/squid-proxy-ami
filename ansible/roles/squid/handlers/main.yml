@@ -1,0 +1,26 @@
+---
+- name: squid parse config
+  command: squid -k parse
+
+- name: squid reconfigure server
+  command: squid -k reconfigure
+
+- name: squid restart service
+  service:
+    name: squid
+    state: restarted
+
+- name: iptables save
+  shell: iptables-save > /etc/sysconfig/iptables
+
+- name: create squid certificate chain
+  shell: "cat {{ squid_ssl_dir }}/squid.key {{squid_ssl_dir }}/squid.crt > {{ squid_ssl_dir }}/squid.pem"
+  notify: squid certificate chain permissions
+
+- name: squid certificate chain permissions
+  file:
+    path: "{{squid_ssl_dir}}/squid.pem"
+    state: file
+    owner: "{{ squid_user }}"
+    group: "{{ squid_group }}"
+    mode: 0400

@@ -1,0 +1,38 @@
+---
+  - name: Check for updates to domain list configs
+    hosts: localhost
+    gather_facts: true
+    vars:
+      ansible_python_interpreter: python3
+      squid_domainlist_dir: "/etc/squid/domainlists"
+      squid_user: squid
+      squid_group: squid
+      config_files:
+        - "net-squid-configs/global_http_domainlist.conf"
+        - "net-squid-configs/global_https_domainlist.conf"
+        - "net-squid-configs/http_domainlist.conf"
+        - "net-squid-configs/https_domainlist.conf"
+    handlers:
+      - name: squid parse config
+        command: squid -k parse
+      - name: squid reconfigure server
+        command: squid -k reconfigure
+    tasks:
+      - name: Download environment config files from S3
+        aws_s3:
+          bucket: "{{ s3_config_bucket }}"
+          object: "{{ item }}"
+          dest: "{{ squid_domainlist_dir }}/{{ item | basename }}"
+          mode: get
+          overwrite: different
+        loop: "{{ config_files }}"
+      - name: Change config owners and permissions
+        ansible.builtin.file:
+          path: "{{ squid_domainlist_dir }}/{{ item | basename }}"
+          owner: "{{ squid_user }}"
+          group: "{{ squid_group }}"
+          mode: "0600"
+        loop: "{{ config_files }}"
+        notify:
+          - squid parse config
+          - squid reconfigure server

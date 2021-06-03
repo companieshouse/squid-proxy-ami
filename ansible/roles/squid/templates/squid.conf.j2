@@ -1,0 +1,99 @@
+visible_hostname squid
+cache deny all
+
+logformat squid %ts.%03tu %6tr %>a %Ss/%03>Hs %<st %rm %ru %ssl::>sni %Sh/%<a %mt
+
+#Setup listeners
+dns_v4_first on
+http_port 0.0.0.0:{{ squid_server_http_port }} intercept
+https_port 0.0.0.0:{{ squid_server_https_port }} cert={{squid_ssl_dir}}/squid.pem ssl-bump intercept
+http_port 0.0.0.0:3130
+
+# Deny requests to non allowlist ports
+acl Safe_ports port 80
+acl Safe_ports port 443
+http_access deny !Safe_ports
+
+# Deny CONNECT to other than secure SSL ports
+acl SSL_ports port 443
+acl CONNECT method CONNECT
+http_access deny CONNECT !SSL_ports
+http_access allow SSL_ports
+
+# Only allow cachemgr access from localhost
+http_access allow localhost manager
+http_access deny manager
+http_access deny to_localhost
+
+#Deny non allowlisted connection sources
+acl allowedhostsrange src {{ squid_allowed_hosts_range }}
+http_access deny !allowedhostsrange
+
+
+{% if squid_sslproxy_cert_error_bypass_hosts|length >= 1 %}
+#sslproxy_cert_error bypass for trusted domains
+acl BrokenButTrustedServers ssl::server_name "{{ squid_sslproxy_cert_error_bypass_file }}"
+sslproxy_cert_error allow BrokenButTrustedServers
+sslproxy_cert_error deny all
+{% endif %}
+
+######
+# HTTP DNS Filtering
+######
+{% if only_log_requests_mode %}
+
+http_access allow all
+
+acl step1 at_step SslBump1
+acl step2 at_step SslBump2
+acl step3 at_step SslBump3
+ssl_bump peek   step1 all
+ssl_bump peek   step2 all
+ssl_bump splice step3 all
+{% else %}
+
+##HTTP DNS Filtering
+{% for prefix in http_prefix_domainlists %}
+acl {{ prefix['name'] }}_sites dstdomain "{{squid_domainlist_dir}}/{{ prefix['name'] }}.conf"
+acl {{ prefix['name'] }}_src src {{ prefix['cidr'] }}
+http_access allow {{ prefix['name'] }}_sites {{ prefix['name'] }}_src
+
+{% endfor %}
+acl global_http_sites dstdomain "{{squid_domainlist_dir}}/http_global_domainlist.conf"
+http_access allow global_http_sites
+
+##HTTPS DNS Filtering
+#ACL setup
+{% for prefix in https_prefix_domainlists %}
+acl {{ prefix['name'] }}_src src {{ prefix['cidr'] }}
+acl {{ prefix['name'] }}_sites ssl::server_name "{{squid_domainlist_dir}}/{{ prefix['name'] }}.conf"
+
+{% endfor %}
+acl global_https_sites ssl::server_name "{{squid_domainlist_dir}}/https_global_domainlist.conf"
+
+#Setup sslbump
+acl step1 at_step SslBump1
+acl step2 at_step SslBump2
+acl step3 at_step SslBump3
+
+ssl_bump peek step1 all
+
+{% for prefix in https_prefix_domainlists %}
+ssl_bump        peek    step2   {{ prefix['name'] }}_src  {{ prefix['name'] }}_sites
+{% endfor %}
+
+ssl_bump        peek    step2   global_https_sites
+
+{% for prefix in https_prefix_domainlists %}
+ssl_bump        splice  step3   {{ prefix['name'] }}_src  {{ prefix['name'] }}_sites
+{% endfor %}
+
+ssl_bump        splice  step3   global_https_sites
+
+#No match, terminate remaining HTTPS traffic
+ssl_bump terminate step2 all
+ssl_bump terminate step3 all
+
+#No acl match, terminate remaining HTTP traffic
+http_access deny all
+{% endif %}
