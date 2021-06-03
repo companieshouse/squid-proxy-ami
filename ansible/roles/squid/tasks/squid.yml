@@ -8,6 +8,7 @@
     - python3-pip
     - policycoreutils-python
     - libselinux-python
+    - libselinux-python3
     - awscli
 
 - name: Install Prerequisites (aws)
@@ -19,7 +20,7 @@
 - name: Install Prerequisites (cryptography)
   pip:
     name: "cryptography"
-    state: latest
+    state: present
     executable: pip3
 
 - name: install squid
@@ -55,7 +56,7 @@
     - "{{ squid_ssl_dir }}"
 
 - name: Generate an OpenSSL private key
-  vars: 
+  vars:
     ansible_python_interpreter: python3
   openssl_privatekey:
     path: "{{squid_ssl_dir}}/squid.key"
@@ -65,7 +66,7 @@
     mode: 0600
 
 - name: Generate an OpenSSL CSR
-  vars: 
+  vars:
     ansible_python_interpreter: python3
   openssl_csr:
     path: "{{squid_ssl_dir}}/squid.csr"
@@ -76,8 +77,8 @@
     organizational_unit_name: "squid"
 
 - name: Generate a Self Signed OpenSSL certificate
-  vars: 
-    ansible_python_interpreter: python3
+  vars:
+    ansible_python_interpreter: python3  
   openssl_certificate:
     path: "{{squid_ssl_dir}}/squid.crt"
     privatekey_path: "{{squid_ssl_dir}}/squid.key"
