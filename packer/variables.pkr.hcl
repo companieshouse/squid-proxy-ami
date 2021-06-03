@@ -1,3 +1,8 @@
+variable "ami_account_ids" {
+  type        = list(string)
+  description = "A list of account IDs that have access to launch the resulting AMI(s)"
+}
+
 variable "ami_name_prefix" {
   type        = string
   default     = "squid"
@@ -77,4 +82,15 @@ variable "kms_key_id" {
   type        = string
   default     = null
   description = "KMS key ID, arn or alias to use for root volume encryption in the main region. If encrypt_boot is true and this is left null, the AWS default key is used"
+}
+
+variable "nagios_api_key" {
+  type        = string
+  default     = ""
+  description = "This key will be supplied to the Nagios agent Ansible role to populate jinja templates"
+}
+
+variable "s3_config_bucket" {
+  type        = string
+  description = "Bucket that contains any artifacts required to complete the build process, will be passed to Ansible"
 }

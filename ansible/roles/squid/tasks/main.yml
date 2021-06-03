@@ -4,3 +4,25 @@
 
 - name: Include tasks for Squid server installation and configuration
   include_tasks: squid.yml
+
+- name: Copy deployment/update playbooks to server for later use
+  copy:
+    src: "{{ item }}"
+    dest: "{{ ansible_deploy_playbook_directory }}/{{ item }}"
+    mode: 0755
+  loop:
+    - deployment-script.yml
+    - config_check_update.yml
+
+- name: Setup deployment playbook dependancies (1/2)  
+  copy:
+    src: "{{ item }}"
+    dest: "{{ ansible_deploy_playbook_directory }}/"
+    mode: 0755
+  loop: 
+    - requirements.yml
+
+- name: Setup deployment playbook dependancies (2/2)
+  command: "ansible-galaxy install -f -r {{ansible_deploy_playbook_directory}}/requirements.yml"
+  register: requirements_output
+  changed_when: '"was installed successfully" in requirements_output.stdout'

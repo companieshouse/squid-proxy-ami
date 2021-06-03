@@ -24,15 +24,3 @@
     owner: "{{ squid_user }}"
     group: "{{ squid_group }}"
     mode: 0400
-
-- name: Reload amazon-cloudwatch-agent
-  command: "{{ cwa_agent_ctl }} -a fetch-config -m ec2 -c file:{{ cloudwatch_agent_conf_file }} -s"
-  notify: Leave a copy of cw configuration
-  when: ansible_virtualization_type != 'docker'
-
-- name: Leave a copy of cw configuration
-  copy:
-    dest: "{{ cloudwatch_agent_conf_file }}"
-    content: "{{ cloudwatch_conf }}"
-    force: yes
-  when: ansible_virtualization_type != 'docker'
