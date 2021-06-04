@@ -12,5 +12,5 @@ ansible-galaxy install -r ../requirements.yml
 
 Then we can execute the playbook. This will create a docker container based on Centos7 and execute the playbook.
 ```
-ansible-playbook main.yml
+ansible-playbook playbook.yml -e "s3_config_bucket=<s3 bucket name> s3_config_bucket_access_key=<your access key> s3_config_bucket_secret_key=<you secret key>"
 ```

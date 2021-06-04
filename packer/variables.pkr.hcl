@@ -94,3 +94,13 @@ variable "s3_config_bucket" {
   type        = string
   description = "Bucket that contains any artifacts required to complete the build process, will be passed to Ansible"
 }
+
+variable "s3_config_bucket_access_key" {
+  type        = string
+  description = "The AWS Access Key that allows access to the config bucket"
+}
+
+variable "s3_config_bucket_secret_key" {
+  type        = string
+  description = "The AWS Secret Key that allows access to the config bucket"
+}
