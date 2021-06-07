@@ -91,6 +91,29 @@
     source: "{{ ssh_allowed_hosts_range }}"
   notify: iptables save
 
+- name: Allow new and established incoming SYN packets on TCP port 5666 (Nagios).
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 5666
+    ctstate: NEW,ESTABLISHED
+    syn: match
+    jump: ACCEPT
+    comment: Accept new Nagios connections
+    source: "{{ nagios_hosts_address }}"
+  notify: iptables save
+
+- name: Allow new incoming SYN packets on ICMP.
+  iptables:
+    chain: INPUT
+    protocol: icmp
+    ctstate: NEW,ESTABLISHED
+    syn: match
+    jump: ACCEPT
+    comment: Accept Nagios ping
+    source: "{{ nagios_hosts_address }}"
+  notify: iptables save
+
 - name: Allow related and established connections
   iptables:
     chain: INPUT

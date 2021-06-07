@@ -45,3 +45,4 @@ squid_sslproxy_cert_error_bypass_file: "{{squid_domainlist_dir}}/sslproxy_cert_e
 
 squid_allowed_hosts_range: "10.0.0.0/8"
 ssh_allowed_hosts_range: "10.0.0.0/8"
+nagios_hosts_address: "10.44.13.233"
