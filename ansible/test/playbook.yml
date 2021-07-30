@@ -6,14 +6,6 @@
     inventory:
       - name: squid
         image: "geerlingguy/docker-centos7-ansible"
-        # In order to run this test playbook you will need access to the Shared Services Config bucket.
-        # The same functionality can be faked if you wish to test via another S3 bucket but the files
-        # must exist with the same name and path inside S3.
-        # In order for Ansible to authenticate to S3 you must provide credentials via the command line 
-        # but if using AWS SSO you must provide a Session Token here which is provided by AWS SSO.
-        # Otherwise Access Key and Secret Key should be enough at run time.
-        env: 
-          AWS_SESSION_TOKEN: ""
   roles:
     - role: provision_docker
       provision_docker_inventory: "{{ inventory }}"
