@@ -6,6 +6,9 @@
     inventory:
       - name: squid
         image: "geerlingguy/docker-centos7-ansible"
+        network_mode: bridge
+        provision_docker_volumes: 
+          - /lib/modules:/lib/modules 
   roles:
     - role: provision_docker
       provision_docker_inventory: "{{ inventory }}"
