@@ -11,7 +11,7 @@
     - src: chrismeyersfsu.provision_docker
       name: provision_docker
 
-    - src: https://github.com/christiangda/ansible-role-amazon-cloudwatch-agent.git
+    - src: https://github.com/companieshouse/ansible-role-amazon-cloudwatch-agent.git
       name: cloudwatch-agent
 
     - src: https://github.com/geerlingguy/ansible-role-repo-epel
