@@ -6,7 +6,7 @@
       - ch_collections.base
     roles:
       - name: ch_collections.base.cloudwatch_agent_config
-        when: cw_log_files is defined
+        when: (cw_log_files is defined) or (cw_collect_metrics is defined)
     tasks:
       - name: Create cron entry for config update check
         ansible.builtin.cron:
@@ -14,3 +14,4 @@
           minute: "0"
           hour: "*/3"
           job: " /usr/local/bin/ansible-playbook /root/config_check_update.yml -e \"s3_config_bucket={{ s3_config_bucket }}\" "
+        when: s3_config_bucket is defined
