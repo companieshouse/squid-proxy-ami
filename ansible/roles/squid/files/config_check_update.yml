@@ -12,6 +12,7 @@
         - "net-squid-configs/global_https_domainlist.conf"
         - "net-squid-configs/http_domainlist.conf"
         - "net-squid-configs/https_domainlist.conf"
+        - "net-squid-configs/step2_allow_hosts.conf"
     handlers:
       - name: squid parse config
         command: squid -k parse
