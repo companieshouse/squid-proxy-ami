@@ -115,6 +115,7 @@
     - "{{ https_prefix_domainlists }}"
     - "{{ global_http_domainlist }}"
     - "{{ global_https_domainlist }}"
+    - "{{ step2_allow_hosts }}"
 
 - name: Change file ownership, group and permissions on domainlist configs
   ansible.builtin.file:
@@ -127,6 +128,7 @@
     - "{{ https_prefix_domainlists }}"
     - "{{ global_http_domainlist }}"
     - "{{ global_https_domainlist }}"
+    - "{{ step2_allow_hosts }}"
   notify:
     - squid parse config
     - squid reconfigure server

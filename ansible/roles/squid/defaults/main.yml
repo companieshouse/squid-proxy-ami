@@ -40,6 +40,11 @@ global_https_domainlist:
       name: "global_https_domainlist"
     }
     
+step2_allow_hosts:
+  - {
+      name: "step2_allow_hosts"
+    }
+       
 squid_sslproxy_cert_error_bypass_hosts: []
 squid_sslproxy_cert_error_bypass_file: "{{squid_domainlist_dir}}/sslproxy_cert_error_bypass_hosts"
 
