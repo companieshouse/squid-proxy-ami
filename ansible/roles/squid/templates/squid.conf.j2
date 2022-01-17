@@ -48,6 +48,7 @@ acl step1 at_step SslBump1
 acl step2 at_step SslBump2
 acl step3 at_step SslBump3
 ssl_bump peek   step1 all
+ssl_bump splice step2 step2allowhosts
 ssl_bump peek   step2 all
 ssl_bump splice step3 all
 {% else %}
@@ -61,6 +62,9 @@ http_access allow {{ prefix['name'] }}_sites {{ prefix['name'] }}_src
 {% endfor %}
 acl global_http_sites dstdomain "{{squid_domainlist_dir}}/http_global_domainlist.conf"
 http_access allow global_http_sites
+
+#Some sites break on step2 peek as Squid doesnt support all TLS extentions, but we have enough info from step1, set up ACL to splice these at step2 based on SNI
+acl step2allowhosts ssl::server_name "/etc/squid/domainlists/step2_allow_hosts.conf"
 
 ##HTTPS DNS Filtering
 #ACL setup
@@ -77,7 +81,7 @@ acl step2 at_step SslBump2
 acl step3 at_step SslBump3
 
 ssl_bump peek step1 all
-
+ssl_bump splice step2 step2allowhosts
 {% for prefix in https_prefix_domainlists %}
 ssl_bump        peek    step2   {{ prefix['name'] }}_src  {{ prefix['name'] }}_sites
 {% endfor %}
