@@ -40,6 +40,9 @@ sslproxy_cert_error deny all
 ######
 # HTTP DNS Filtering
 ######
+#Some sites break on step2 peek as Squid doesnt support all TLS extentions, but we have enough info from step1, set up ACL to splice these at step2 based on SNI
+acl step2allowhosts ssl::server_name "/etc/squid/domainlists/step2_allow_hosts.conf"
+
 {% if only_log_requests_mode %}
 
 http_access allow all
@@ -62,9 +65,6 @@ http_access allow {{ prefix['name'] }}_sites {{ prefix['name'] }}_src
 {% endfor %}
 acl global_http_sites dstdomain "{{squid_domainlist_dir}}/http_global_domainlist.conf"
 http_access allow global_http_sites
-
-#Some sites break on step2 peek as Squid doesnt support all TLS extentions, but we have enough info from step1, set up ACL to splice these at step2 based on SNI
-acl step2allowhosts ssl::server_name "/etc/squid/domainlists/step2_allow_hosts.conf"
 
 ##HTTPS DNS Filtering
 #ACL setup
