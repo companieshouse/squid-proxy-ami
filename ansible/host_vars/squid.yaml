@@ -1,6 +1,17 @@
 ---
 only_log_requests_mode: true 
-squid_sslproxy_cert_error_bypass_hosts: ["rhui3.eu-west-2.aws.ce.redhat.com"]
+squid_sslproxy_cert_error_bypass_hosts: [
+  "rhui.eu-west-2.aws.ce.redhat.com",
+  "rhui3.eu-west-2.aws.ce.redhat.com",
+  "rhui4-cds01.eu-west-2.aws.ce.redhat.com",
+  "rhui4-cds02.eu-west-2.aws.ce.redhat.com",
+  "rhui4-cds03.eu-west-2.aws.ce.redhat.com",
+  "rhui3-cds01.eu-west-2.aws.ce.redhat.com",
+  "rhui3-cds02.eu-west-2.aws.ce.redhat.com",
+  "rhui3-cds03.eu-west-2.aws.ce.redhat.com",
+  "rhui2-cds01.eu-west-2.aws.ce.redhat.com",
+  "rhui2-cds02.eu-west-2.aws.ce.redhat.com"
+]
 
 ## Nagios Variables
 auto_register_client: true
